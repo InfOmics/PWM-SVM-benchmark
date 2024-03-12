@@ -29,7 +29,7 @@ def extract_sequences(input_dir: str, output_dir: str, length: int, ref_genome: 
             output_name = f"{os.path.splitext(os.path.basename(bedfile_path))[0]}_{f'Width{length}' if length != 0 else 'full_length'}.fa"
             outpath = os.path.join(output_dir, f"Width_{length}" if length != 0 else "Full_width", os.path.splitext(os.path.basename(bedfile_path))[0],output_name)
 
-            subprocess.call(f"bedtools getfasta -fi {ref_genome} -bed {bedfile_path} -fo {outpath}", shell=True)
+            subprocess.call(f"bedtools getfasta -fi {ref_genome} -bed {bedfile_path} -fo {outfile}", shell=True)
             print(f"Creato file {output_name}")
 
 
