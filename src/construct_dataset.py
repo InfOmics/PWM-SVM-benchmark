@@ -173,8 +173,9 @@ def construct_dataset(positive: str, threshold: int, genome: str, outdir: str, n
     # construct background data matching negative and positive chrom location
     if negative is not None:  
         trainneg, testneg = split_train_test(negative_fname_filt)
-        seqneg_train = extract_sequences(sortbed(trainneg, threshold, sort=False), genome)
-        seqneg_test = extract_sequences(sortbed(testneg, threshold, sort=False), genome)
+        # always take the full background dataset
+        seqneg_train = extract_sequences(sortbed(trainneg, 0, sort=False), genome)
+        seqneg_test = extract_sequences(sortbed(testneg, 0, sort=False), genome)
         bg_train, bg_test = compute_background_data(seqpos_train, seqpos_test, seqneg_train, seqneg_test)
         write_fasta(seqneg_train, os.path.join(outdir, f"{fname_prefix}_neg_dnase_train.fa"), bg_train)
         write_fasta(seqneg_test, os.path.join(outdir, f"{fname_prefix}_neg_dnase_test.fa"), bg_test)
