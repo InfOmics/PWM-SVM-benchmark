@@ -10,7 +10,7 @@ import subprocess
 import sys
 import os
 
-MODELTYPES = ["svm", "pwm"]
+MODELTYPES = ["svm", "meme", "streme"]
 GKMPREDICT = "gkmpredict"
 FIMO = "fimo"
 FIMODEF = "--max-stored-scores 1000000000 --verbosity 1 --thresh 1"
@@ -112,7 +112,7 @@ def fimo(seqfile: str, working_dir: str, model: str) -> Dict[str, float]:
         scores[seqname] = max(x["score"].tolist())
     return scores
 
-def store_scores_pwm(scorespos_dict: Dict[str, float], scoresneg_dict: Dict[str, float], scores_prefix: str) -> None:
+def store_scores_pwm(scorespos_dict: Dict[str, float], scoresneg_dict: Dict[str, float], modeltype: str, scores_prefix: str) -> None:
     scorespos = pd.DataFrame(
         {
             COLNAMES[0]: list(scorespos_dict.keys()),
@@ -129,16 +129,16 @@ def store_scores_pwm(scorespos_dict: Dict[str, float], scoresneg_dict: Dict[str,
     )  # create dataframe from negative sequences scores
     scores = pd.concat([scorespos, scoresneg])  # concatenate dataframes
     scores = scores.sample(frac=1).to_csv(
-        f"{scores_prefix}_pwm.tsv", sep="\t", index=False
+        f"{scores_prefix}_{modeltype}.tsv", sep="\t", index=False
     )
 
-def score_pwm(testpos: str, testneg: str, model: str, outdir: str, scores_prefix: str) -> None:
+def score_pwm(testpos: str, testneg: str, model: str, modeltype: str, outdir: str, scores_prefix: str) -> None:
     working_dir = os.path.dirname(outdir)
     # score positive and negative sequences
     scorespos = fimo(testpos, working_dir, model)
     scoresneg = fimo(testneg, working_dir, model)
     # store sequence scores 
-    store_scores_pwm(scorespos, scoresneg, os.path.join(outdir, scores_prefix))
+    store_scores_pwm(scorespos, scoresneg, modeltype, os.path.join(outdir, scores_prefix))
 
 def main():
     testpos, testneg, model, modeltype, outdir = parse_commandline(sys.argv[1:])
@@ -146,7 +146,7 @@ def main():
     if modeltype == MODELTYPES[0]:  # svm
         score_svm(testpos, testneg, model, outdir, scores_prefix)
     else:  # pwm
-        score_pwm(testpos, testneg, model, outdir, scores_prefix)
+        score_pwm(testpos, testneg, model, modeltype, outdir, scores_prefix)
 
 if __name__ == "__main__":
     main()
