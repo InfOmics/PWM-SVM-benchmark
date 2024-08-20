@@ -27,33 +27,48 @@ def parse_commandline(args: List[str]) -> Tuple[str, str, str, str]:
 
 def gkmtrain(positive: str, negative: str, outdir: str) -> str:
     # compute svm model using lsgkm
-    outprefix = os.path.splitext(os.path.basename(positive))[0].split("_", 1)
+    outprefix = os.path.splitext(os.path.basename(positive))[0].split("_", 1)[0]
     outdir = os.path.join(outdir, f"{outprefix}_svm")
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
     modelprefix = os.path.join(outdir, outprefix)
     try:  # run lsgkm
-        code = subprocess.call(f"gkmtrain -T 16 {positive} {negative} {modelprefix}", shell=True)
+        code = subprocess.call(
+            f"gkmtrain -T 16 {positive} {negative} {modelprefix}", 
+            shell=True,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.DEVNULL,
+        )
         if code != 0:
             raise subprocess.SubprocessError(f"SVM training failed on {positive}")
     except OSError as e:
         raise OSError("SVM training failed") from e
 
 def meme(positive: str, outdir: str) -> str:
-    outprefix = os.path.splitext(os.path.basename(positive))[0].split("_", 1)
+    outprefix = os.path.splitext(os.path.basename(positive))[0].split("_", 1)[0]
     outdir = os.path.join(outdir, f"{outprefix}_meme")
     try:
-        code = subprocess.call(f"meme -oc {outdir} {MEMEDEFAULT} {positive}", shell=True)
+        code = subprocess.call(
+            f"meme -oc {outdir} {MEMEDEFAULT} {positive}", 
+            shell=True,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.DEVNULL,
+        )
         if code != 0:
             raise subprocess.SubprocessError(f"MEME PWM training failed on {positive}")
     except OSError as e:
         raise OSError("MEME training failed") from e
 
 def streme(positive: str, negative: str, outdir: str) -> str:
-    outprefix = os.path.splitext(os.path.basename(positive))[0].split("_", 1)
+    outprefix = os.path.splitext(os.path.basename(positive))[0].split("_", 1)[0]
     outdir = os.path.join(outdir, f"{outprefix}_streme")
     try:
-        code = subprocess.call(f"streme -oc {outdir} {STREMEDEFAULT} --n {negative} --p {positive}", shell=True)
+        code = subprocess.call(
+            f"streme -oc {outdir} {STREMEDEFAULT} --n {negative} --p {positive}", 
+            shell=True,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.DEVNULL,
+        )
         if code != 0:
             raise subprocess.SubprocessError(f"STREME PWM training failed on {positive}")
     except OSError as e:

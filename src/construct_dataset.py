@@ -149,7 +149,6 @@ def shuffle(sequences: str, sequences_shuffle: str) -> str:
         raise OSError("Sequence shuffle failed")
     return sequences_shuffle
 
-
 def construct_dataset(positive: str, threshold: int, genome: str, outdir: str, negative: Optional[str] = None):
     """ """
 
