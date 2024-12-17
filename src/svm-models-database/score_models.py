@@ -77,7 +77,7 @@ def compute_f1(scores: pd.DataFrame) -> float:
 
 def evaluate_models_performance(scoresdir: str):
     # retrieve experiment names
-    experiment_names = [os.path.basename(s).split(".")[0] for s in glob(os.path.join(scoresdir, "*.scores.*.txt"))]
+    experiment_names = set([os.path.basename(s).split(".")[0] for s in glob(os.path.join(scoresdir, "*.scores.*.txt"))])
     # initialize models performance report
     report = {cname: [] for cname in REPORTCOLNAMES}
     for experiment_name in experiment_names:  # iterate over all models' scores
