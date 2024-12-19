@@ -1,0 +1,35 @@
+import os
+
+rule construct_dataset:
+    input:
+        posbed = "data/ENCODE/ChIP-seq",
+        negbed = "data/ENCODE/DNAse-seq"
+    output:
+        train_pos = directory("data/traindata/positive"),
+        train_neg = directory("data/traindata/negative"),
+        test_pos = directory("data/testdata/positive"),
+        test_neg = directory("data/testdata/negative")
+    params:
+        outdir = "data",
+        ref_genome = "data/REFERENCE_GENOME/hg38.fa"
+    shell:
+        "python dataset_split.py {input.posbed} {input.negbed} {params.ref_genome}"
+
+rule model_training:
+    input:
+        trainposdir = "data/traindata/positive",
+        trainnegdir = "data/traindata/negative"
+    output:
+        outdir = directory("models")
+    shell: 
+        "python svm_models_training.py {input.trainposdir} {input.trainnegdir}"
+
+rule score_models:
+    input: 
+        testposdir = "data/testdata/positive",
+        testnegdir = "data/testdata/negative",
+        modelsdir = "models"
+    output:
+        out_table = "models_report.csv"
+    shell: 
+        "python score_models.py {input.testposdir} {input.testnegdir} {input.modelsdir}"
