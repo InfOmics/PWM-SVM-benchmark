@@ -2,6 +2,8 @@
 """
 
 from typing import Tuple, Optional, Dict, List
+from tqdm import tqdm
+from time import time
 from glob import glob
 
 import pandas as pd
@@ -227,10 +229,15 @@ def main():
     # construct train and test data directory tree
     trainposdir, trainnegdir, testposdir, testnegdir = construct_dirtree("data")
     # split each dataset on train and test
-    for posbed in posbeds:
+    sys.stdout.write("Train and test datasets construction\n")
+    start = time()
+    for posbed in tqdm(posbeds):
         split_dataset(
             posbed, negbed, genome, trainposdir, trainnegdir, testposdir, testnegdir
         )
+    sys.stdout.write(
+        f"Train and test datasets construction completed in {(time() - start):.2f}s\n\n"
+    )
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@
 
 from typing import Tuple, List
 from glob import glob
+from tqdm import tqdm
+from time import time
 
 import subprocess
 import sys
@@ -37,7 +39,9 @@ def train_models(trainposdir: str, trainnegdir: str, modelsdir: str):
     )
     assert len(posfasta) == len(negfasta)
     experiment_names = [os.path.basename(e).split("_")[0] for e in posfasta]
-    for experiment_name in experiment_names:  # train svm model for each datset
+    sys.stdout.write("Training SVM-based motif models\n")
+    start = time()
+    for experiment_name in tqdm(experiment_names):  # train svm model for each datset
         positive = os.path.join(trainposdir, f"{experiment_name}_train.fa")
         if not os.path.isfile(positive):
             raise FileNotFoundError(
@@ -49,6 +53,9 @@ def train_models(trainposdir: str, trainnegdir: str, modelsdir: str):
                 f"Unable to locate negative training dataset {negative}"
             )
         train(positive, negative, experiment_name, modelsdir)
+    sys.stdout.write(
+        f"Training SVM-based motif models completed in {(time() - start):.2f}s\n\n"
+    )
 
 
 def main():
