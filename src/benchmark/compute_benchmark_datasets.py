@@ -21,6 +21,7 @@ random.seed(1234)
 CHROMS = [f"chr{c}" for c in list(range(1, 23)) + ["X", "Y"]]
 COMPARISONS = ["size", "width"]  # benchmark comparisons performed
 SIZES = [500, 1000, 2000, 5000, 10000, 0]  # dataset sizes compared
+WIDTHS = [50, 100, 150, 200, 0]  # sequence widths compared
 
 
 def parse_commandline(args: List[str]) -> Tuple[str, str, str]:
@@ -46,7 +47,9 @@ def read_bed(bedfile: str) -> pd.DataFrame:
 
 def sort_bed(bed: pd.DataFrame, prefix: str, size: int) -> pybedtools.BedTool:
     """ """
-    bed = bed.sort_values([8, 6], ascending=False)  # sort peaks by q-value and enrichment 
+    bed = bed.sort_values(
+        [8, 6], ascending=False
+    )  # sort peaks by q-value and enrichment
     size = bed.shape[0] if size == 0 else size  # 0 for full dataset
     bedout = f"{prefix}_train.bed"
     # to avoid training bias, shuffle the order of peaks
@@ -88,8 +91,10 @@ def select_shuffle_bg_size(fastapos: str, fastaneg: str, prefix: str) -> None:
             for seqname in selected_sequences:
                 outfile.write(f">{seqname}\n{sequencesneg[seqname]}\n")
     except OSError as e:
-        raise OSError("An error occurred while writing shuffle background sequences") from e
-    
+        raise OSError(
+            "An error occurred while writing shuffle background sequences"
+        ) from e
+
 
 def chrom_split(fname: str) -> Dict[str, List[str]]:
     """ """
@@ -99,6 +104,7 @@ def chrom_split(fname: str) -> Dict[str, List[str]]:
             chrom = line.strip().split()[0]
             chrom_dict[chrom].append(line)
     return chrom_dict
+
 
 def compute_dnase_bg_size(trainpos: str, trainneg: str, prefix: str) -> Tuple[str, str]:
     """ """
@@ -117,11 +123,31 @@ def compute_datasets_size(benchdir: str, traindatadir: str, genome: str, shuffle
     """ """
     # define comparison root directory
     rootdir = os.path.join(benchdir, "dataset-size-comparison")
-    trainposdir_fasta = os.path.join(rootdir, "shuffle/train/fasta/positive") if shuffle else os.path.join(rootdir, "dnase/train/fasta/positive")
-    trainposdir_bed = os.path.join(rootdir, "shuffle/train/bed/positive") if shuffle else os.path.join(rootdir, "dnase/train/bed/positive")
-    trainnegdir_fasta = os.path.join(rootdir, "shuffle/train/fasta/negative") if shuffle else os.path.join(rootdir, "dnase/train/fasta/negative")
-    trainnegdir_bed = os.path.join(rootdir, "shuffle/train/bed/negative") if shuffle else os.path.join(rootdir, "dnase/train/bed/negative")
-    traindatadir = os.path.join(traindatadir, "shuffle") if shuffle else os.path.join(traindatadir, "dnase")
+    trainposdir_fasta = (
+        os.path.join(rootdir, "shuffle/train/fasta/positive")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/fasta/positive")
+    )
+    trainposdir_bed = (
+        os.path.join(rootdir, "shuffle/train/bed/positive")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/bed/positive")
+    )
+    trainnegdir_fasta = (
+        os.path.join(rootdir, "shuffle/train/fasta/negative")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/fasta/negative")
+    )
+    trainnegdir_bed = (
+        os.path.join(rootdir, "shuffle/train/bed/negative")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/bed/negative")
+    )
+    traindatadir = (
+        os.path.join(traindatadir, "shuffle")
+        if shuffle
+        else os.path.join(traindatadir, "dnase")
+    )
     # retrieve positive bed files
     posbeds = glob(os.path.join(traindatadir, "positive/*.bed"))
     for size in SIZES:  # iterate over dataset sizes
@@ -131,28 +157,143 @@ def compute_datasets_size(benchdir: str, traindatadir: str, genome: str, shuffle
         trainposdir_bed_size = os.path.join(trainposdir_bed, sizedir)
         trainnegdir_fasta_size = os.path.join(trainnegdir_fasta, sizedir)
         trainnegdir_bed_size = os.path.join(trainnegdir_bed, sizedir)
-        for d in [trainposdir_fasta_size, trainposdir_bed_size, trainnegdir_fasta_size, trainnegdir_bed_size]:
+        for d in [
+            trainposdir_fasta_size,
+            trainposdir_bed_size,
+            trainnegdir_fasta_size,
+            trainnegdir_bed_size,
+        ]:
             if not os.path.isdir(d):  # create outout folders if not already present
                 os.makedirs(d)
         for posbed in tqdm(posbeds):  # iterate over positive bed files
             bed_prefix = os.path.basename(posbed).split("_")[0]
-            bed_pos = sort_bed(read_bed(posbed), os.path.join(trainposdir_bed_size, bed_prefix), size)
+            bed_pos = sort_bed(
+                read_bed(posbed), os.path.join(trainposdir_bed_size, bed_prefix), size
+            )
             fastapos = extract_sequences(bed_pos, genome)
             if shuffle:  # compute synthetic background data
-                fastaneg = os.path.join(traindatadir, "negative", f"{bed_prefix}_shuffle_neg_train.fa")
+                fastaneg = os.path.join(
+                    traindatadir, "negative", f"{bed_prefix}_shuffle_neg_train.fa"
+                )
                 # select background sequences based on the picked positive sequences
-                select_shuffle_bg_size(fastapos, fastaneg, os.path.join(trainnegdir_fasta_size, bed_prefix))
+                select_shuffle_bg_size(
+                    fastapos, fastaneg, os.path.join(trainnegdir_fasta_size, bed_prefix)
+                )
             else:  # compute real biological background data
-                negbed = os.path.join(traindatadir, "negative", f"{bed_prefix}_dnase_neg_train.bed")
-                bed_neg = compute_dnase_bg_size(bed_pos.fn, negbed, os.path.join(trainnegdir_bed_size, bed_prefix))
+                negbed = os.path.join(
+                    traindatadir, "negative", f"{bed_prefix}_dnase_neg_train.bed"
+                )
+                bed_neg = compute_dnase_bg_size(
+                    bed_pos.fn, negbed, os.path.join(trainnegdir_bed_size, bed_prefix)
+                )
                 fastaneg = extract_sequences(pybedtools.BedTool(bed_neg), genome)
                 subprocess.call(f"mv {fastaneg} {trainnegdir_fasta_size}", shell=True)
             subprocess.call(f"mv {fastapos} {trainposdir_fasta_size}", shell=True)
 
 
+def resize_peak(bedline: List[str], width: int) -> str:
+    """ """
+    # retrieve start, stop and summit position
+    start, stop, summit = list(map(int, bedline[1:3] + [bedline[9]]))
+    center = start + summit  # compute peak summit position
+    # compute new start and stop positions centered around peak summit
+    start = str(center - int(width / 2)) if width != 0 else str(start)
+    stop = str(center + int(width / 2)) if width != 0 else str(stop)
+    return "\t".join(bedline[:1] + [start, stop] + bedline[3:])
+
+
+def resize_bed_peaks(bedfile: str, width: int, prefix: str) -> pybedtools.BedTool:
+    """ """
+    try:  # read input peaks
+        with open(bedfile, mode="r") as infile:
+            bedlines = [line.strip().split() for line in infile]
+    except OSError as e:
+        raise OSError(f"An error occurred while reading {bedfile}") from e
+    # resize peaks according input width
+    bedlines_resized = [resize_peak(line, width) for line in bedlines]
+    bedout = f"{prefix}_train.bed"
+    try:
+        with open(bedout, mode="w") as outfile:  # write resizied peaks
+            outfile.write("\n".join(bedlines_resized))
+    except OSError as e:
+        raise OSError(f"An error occurred while resizing peaks on {bedfile}") from e
+    return pybedtools.BedTool(bedout)
+
+
+def compute_datasets_width(
+    benchdir: str, traindatadir: str, genome: str, shuffle: bool
+):
+    """ """
+    # define comparison root directory
+    rootdir = os.path.join(benchdir, "sequence-width-comparison")
+    trainposdir_fasta = (
+        os.path.join(rootdir, "shuffle/train/fasta/positive")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/fasta/positive")
+    )
+    trainposdir_bed = (
+        os.path.join(rootdir, "shuffle/train/bed/positive")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/bed/positive")
+    )
+    trainnegdir_fasta = (
+        os.path.join(rootdir, "shuffle/train/fasta/negative")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/fasta/negative")
+    )
+    trainnegdir_bed = (
+        os.path.join(rootdir, "shuffle/train/bed/negative")
+        if shuffle
+        else os.path.join(rootdir, "dnase/train/bed/negative")
+    )
+    traindatadir = (
+        os.path.join(traindatadir, "shuffle")
+        if shuffle
+        else os.path.join(traindatadir, "dnase")
+    )
+    # retrieve positive bed files
+    posbeds = glob(os.path.join(traindatadir, "positive/*.bed"))
+    for width in WIDTHS:  # iterate over dataset sizes
+        widthdir = "width_full" if width == 0 else f"width_{width}"
+        sys.stdout.write(f"width - {widthdir}\n")
+        trainposdir_fasta_width = os.path.join(trainposdir_fasta, widthdir)
+        trainposdir_bed_width = os.path.join(trainposdir_bed, widthdir)
+        trainnegdir_fasta_width = os.path.join(trainnegdir_fasta, widthdir)
+        trainnegdir_bed_width = os.path.join(trainnegdir_bed, widthdir)
+        for d in [
+            trainposdir_fasta_width,
+            trainposdir_bed_width,
+            trainnegdir_fasta_width,
+            trainnegdir_bed_width,
+        ]:
+            if not os.path.isdir(d):  # create outout folders if not already present
+                os.makedirs(d)
+        for posbed in tqdm(posbeds):  # iterate over positive bed files
+            bed_prefix = os.path.basename(posbed).split("_")[0]
+            bed_pos = resize_bed_peaks(
+                posbed, width, os.path.join(trainposdir_bed_width, bed_prefix)
+            )
+            fastapos = extract_sequences(bed_pos, genome)
+            if shuffle:  # compute synthetic background data
+                fastaneg = os.path.join(
+                    traindatadir, "negative", f"{bed_prefix}_shuffle_neg_train.fa"
+                )
+                subprocess.call(f"cp {fastaneg} {trainnegdir_fasta_width}", shell=True)
+            else:  # compute real biological background data
+                bedneg = os.path.join(
+                    traindatadir, "negative", f"{bed_prefix}_dnase_neg_train.bed"
+                )
+                subprocess.call(f"cp {bedneg} {trainnegdir_bed_width}", shell=True)
+                fastaneg = os.path.join(
+                    traindatadir, "negative", f"{bed_prefix}_dnase_neg_train.fa"
+                )
+                subprocess.call(f"cp {fastaneg} {trainnegdir_fasta_width}", shell=True)
+            subprocess.call(f"mv {fastapos} {trainposdir_fasta_width}", shell=True)
+
+
 def main():
     # parse input arguments (comparison to perform and benchmark data base folder)
-    # the script assumes that data directory follows the structure defined in the 
+    # the script assumes that data directory follows the structure defined in the
     # previous step of the pipeline
     comparison, traindatadir, genome, benchdir = parse_commandline(sys.argv[1:])
     if not benchdir:
@@ -160,10 +301,10 @@ def main():
     if comparison == COMPARISONS[0]:  # benchmark performance on dataset size
         compute_datasets_size(benchdir, traindatadir, genome, True)  # synthetic bg
         compute_datasets_size(benchdir, traindatadir, genome, False)  # real bg
+    elif comparison == COMPARISONS[1]:  # benchmark perfomance on sequences width
+        compute_datasets_width(benchdir, traindatadir, genome, True)  # synthetic bg
+        compute_datasets_width(benchdir, traindatadir, genome, False)  # real bg
 
 
 if __name__ == "__main__":
     main()
-
-
-
