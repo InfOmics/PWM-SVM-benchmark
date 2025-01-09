@@ -9,8 +9,6 @@ import subprocess
 import sys
 import os
 
-# computational tools used to train motif models
-TOOLS = ["lsgkm", "meme", "streme"]
 # default parameters for meme and streme (pwm models)
 MEMEDEFAULT = "-dna -mod zoops -nmotifs 1 -minw 6 -maxw 30 -revcomp"
 STREMEDEFAULT = "--objfun de --seed 42 --dna --nmotifs 1 --minw 8 --maxw 15"
@@ -38,7 +36,7 @@ def retrieve_experiment_names(datadir: str) -> Set[str]:
     return {os.path.basename(f).split("_")[0] for f in positives}
 
 
-def meme(sequences: str, outprefix: str) -> str:
+def meme(sequences: str, outprefix: str) -> None:
     """ """
     outdir = f"{outprefix}_meme"  # output directory for meme model
     try:
@@ -54,7 +52,7 @@ def meme(sequences: str, outprefix: str) -> str:
         raise OSError("MEME training failed") from e
 
 
-def streme(positive: str, negative: str, outprefix: str) -> str:
+def streme(positive: str, negative: str, outprefix: str) -> None:
     """ """
     outdir = f"{outprefix}_streme"  # output directory for streme model
     try:
@@ -72,7 +70,7 @@ def streme(positive: str, negative: str, outprefix: str) -> str:
         raise OSError("STREME training failed") from e
 
 
-def gkmtrain(positive: str, negative: str, kernel: int, outprefix: str) -> str:
+def gkmtrain(positive: str, negative: str, kernel: int, outprefix: str) -> None:
     """ """
     # compute svm model using lsgkm
     outdir = f"{outprefix}_svm"  # output directory for lsgkm
@@ -94,7 +92,7 @@ def gkmtrain(positive: str, negative: str, kernel: int, outprefix: str) -> str:
         raise OSError("SVM training failed") from e
 
 
-def train_models_size(benchdatadir: str, bg: str, modelsdir: str):
+def train_models_size(benchdatadir: str, bg: str, modelsdir: str) -> None:
     """ """
     # retrieve experiment names
     experiment_names = retrieve_experiment_names(
@@ -118,7 +116,7 @@ def train_models_size(benchdatadir: str, bg: str, modelsdir: str):
             # gkmtrain(positive, negative, 4, os.path.join(modelsoutdir, experiment_name))  # lsgkm train
 
 
-def train_models_width(benchdatadir: str, bg: str, modelsdir: str):
+def train_models_width(benchdatadir: str, bg: str, modelsdir: str) -> None:
     """ """
     # retrieve experiment names
     experiment_names = retrieve_experiment_names(
@@ -140,11 +138,15 @@ def train_models_width(benchdatadir: str, bg: str, modelsdir: str):
             positive = os.path.join(trainposdir, f"{experiment_name}_train.fa")
             negative = os.path.join(trainnegdir, f"{experiment_name}_{bg}_neg_train.fa")
             meme(positive, os.path.join(modelsoutdir, experiment_name))  # meme train
-            # streme(positive, negative, os.path.join(modelsoutdir, experiment_name))  # streme train
-            # gkmtrain(positive, negative, 4, os.path.join(modelsoutdir, experiment_name))  # lsgkm train
+            streme(
+                positive, negative, os.path.join(modelsoutdir, experiment_name)
+            )  # streme train
+            gkmtrain(
+                positive, negative, 4, os.path.join(modelsoutdir, experiment_name)
+            )  # lsgkm train
 
 
-def train_models(comparison: str, benchdatadir: str, benchmarkdir: str):
+def train_models(comparison: str, benchdatadir: str, benchmarkdir: str) -> None:
     """ """
     if comparison == COMPARISONS[0]:  # compare performance on different dataset sizes
         benchdatadir = os.path.join(benchdatadir, "dataset-size-comparison")
