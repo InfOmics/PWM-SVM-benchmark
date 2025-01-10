@@ -1,7 +1,15 @@
 """
 """
 
-from sklearn.metrics import precision_recall_curve, roc_curve, auc, f1_score
+from sklearn.metrics import (
+    precision_score,
+    recall_score,
+    confusion_matrix,
+    precision_recall_curve,
+    roc_curve,
+    auc,
+    f1_score,
+)
 from typing import List, Tuple, Dict
 from itertools import product
 from glob import glob
@@ -9,6 +17,7 @@ from tqdm import tqdm
 from time import time
 
 import pandas as pd
+import numpy as np
 
 import subprocess
 import sys
@@ -21,7 +30,16 @@ FIMO = "fimo"  # fimo command line call
 # parameters used to scan sequences with fimo
 FIMOOPTIONS = "--max-stored-scores 1000000000 --verbosity 1 --thresh 1"
 REPORTCOLS = ["seqname", "score", "pvalue", "peak"]  # colnames used in the report
-PERFCOLS = ["EXPERIMENT", "AUPRC", "AUROC", "F1"]  # performance report column names
+PERFCOLS = [
+    "EXPERIMENT",
+    "PRECISION",
+    "RECALL",
+    "AUPRC",
+    "TPR",
+    "FPR",
+    "AUROC",
+    "F1",
+]  # performance report column names
 
 
 def parse_commandline(args: List[str]) -> Tuple[str, str, str]:
@@ -185,26 +203,14 @@ def score_models_size(
             testneg = os.path.join(
                 testdatadir_neg, f"{experiment_name}_{bg}_neg_test.fa"
             )
-            fimo(
-                testpos,
-                testneg,
-                os.path.join(modelsdir_size, f"{experiment_name}_meme/meme.txt"),
-                os.path.join(scoresoutdir, f"{experiment_name}_meme"),
-            )  # meme
+            # fimo(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_meme/meme.txt"), os.path.join(scoresoutdir, f"{experiment_name}_meme"))  # meme
             fimo(
                 testpos,
                 testneg,
                 os.path.join(modelsdir_size, f"{experiment_name}_streme/streme.txt"),
                 os.path.join(scoresoutdir, f"{experiment_name}_streme"),
             )  # streme
-            gkmpredict(
-                testpos,
-                testneg,
-                os.path.join(
-                    modelsdir_size, f"{experiment_name}_svm/{experiment_name}.model.txt"
-                ),
-                os.path.join(scoresoutdir, f"{experiment_name}_svm"),
-            )  # svm
+            # gkmpredict(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_svm/{experiment_name}.model.txt"), os.path.join(scoresoutdir, f"{experiment_name}_svm"))  # svm
 
 
 def score_models(comparison: str, datadir: str, benchmarkdir: str):
@@ -229,12 +235,56 @@ def read_scores(scores_fname: str) -> pd.DataFrame:
     return pd.read_csv(scores_fname, sep="\t")
 
 
+def compute_precision(scores: str, tool: str) -> float:
+    """ """
+    y_test = scores[REPORTCOLS[3]].tolist()
+    y_pred_proba = (
+        scores[REPORTCOLS[1]].tolist() if tool == "svm" else scores[REPORTCOLS[2]]
+    )
+    y_test, y_pred_proba = scores[REPORTCOLS[3]], scores[REPORTCOLS[1]]
+    precision, _, thresholds = precision_recall_curve(y_test, y_pred_proba)
+    return precision[len(thresholds) // 2]
+
+
+def compute_recall(scores: str, tool: str) -> float:
+    """ """
+    y_test = scores[REPORTCOLS[3]].tolist()
+    y_pred_proba = (
+        scores[REPORTCOLS[1]].tolist() if tool == "svm" else scores[REPORTCOLS[2]]
+    )
+    y_test, y_pred_proba = scores[REPORTCOLS[3]], scores[REPORTCOLS[1]]
+    _, recall, thresholds = precision_recall_curve(y_test, y_pred_proba)
+    return recall[len(thresholds) // 2]
+
+
 def compute_auprc(scores: pd.DataFrame) -> float:
     """ """
     # retrieve true and predicted labels
     y_test, y_pred_proba = scores[REPORTCOLS[3]], scores[REPORTCOLS[1]]
     precision, recall, _ = precision_recall_curve(y_test, y_pred_proba)
     return auc(recall, precision)  # compute auprc
+
+
+def compute_tpr(scores: str, tool: str) -> float:
+    """ """
+    y_test = scores[REPORTCOLS[3]].tolist()
+    y_pred_proba = (
+        scores[REPORTCOLS[1]].tolist() if tool == "svm" else scores[REPORTCOLS[2]]
+    )
+    y_test, y_pred_proba = scores[REPORTCOLS[3]], scores[REPORTCOLS[1]]
+    _, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+    return tpr[len(thresholds) // 2]
+
+
+def compute_fpr(scores: str, tool: str) -> float:
+    """ """
+    y_test = scores[REPORTCOLS[3]].tolist()
+    y_pred_proba = (
+        scores[REPORTCOLS[1]].tolist() if tool == "svm" else scores[REPORTCOLS[2]]
+    )
+    y_test, y_pred_proba = scores[REPORTCOLS[3]], scores[REPORTCOLS[1]]
+    fpr, _, thresholds = roc_curve(y_test, y_pred_proba)
+    return fpr[len(thresholds) // 2]
 
 
 def compute_auroc(scores: pd.DataFrame) -> float:
@@ -256,7 +306,7 @@ def compute_f1(scores: pd.DataFrame, tool: str) -> float:
         y_pred = [1 if l > 0 else 0 for l in y_pred_proba]
     else:  # on pwm check pvalues
         y_pred = [1 if l < 1e-4 else 0 for l in y_pred_proba]
-    return f1_score(y_test, y_pred)
+    return f1_score(y_test, y_pred, average="weighted")
 
 
 def evaluate_models_size(scoresdir: str, perfdir: str) -> None:
@@ -267,14 +317,13 @@ def evaluate_models_size(scoresdir: str, perfdir: str) -> None:
         for d in glob(os.path.join(scoresdir, "size_500/*_streme.tsv"))
     }
     assert len(experiment_names) == 59
-    print(experiment_names)
-    for size in SIZES:
+    for size in SIZES[:1]:
         sizedir = sizedir = "size_full" if size == 0 else f"size_{size}"
         sys.stdout.write(f"size - {sizedir}\n")
         scoresdir_size = os.path.join(scoresdir, sizedir)
         # initialize models performance report
         report = {cname: [] for cname in PERFCOLS}
-        for tool in ["meme", "streme", "svm"]:
+        for tool in ["streme"]:
             perftable = os.path.join(perfdir, f"summary_table_{sizedir}_{tool}.tsv")
             for experiment_name in tqdm(
                 experiment_names
@@ -283,9 +332,13 @@ def evaluate_models_size(scoresdir: str, perfdir: str) -> None:
                     os.path.join(scoresdir_size, f"{experiment_name}_{tool}.tsv")
                 )
                 report[PERFCOLS[0]].append(experiment_name)
-                report[PERFCOLS[1]].append(compute_auprc(scores))
-                report[PERFCOLS[2]].append(compute_auroc(scores))
-                report[PERFCOLS[3]].append(compute_f1(scores, tool))
+                report[PERFCOLS[1]].append(compute_precision(scores, tool))  # precision
+                report[PERFCOLS[2]].append(compute_recall(scores, tool))  # recall
+                report[PERFCOLS[3]].append(compute_auprc(scores))  # auprc
+                report[PERFCOLS[4]].append(compute_tpr(scores, tool))  # tpr
+                report[PERFCOLS[5]].append(compute_fpr(scores, tool))  # fpr
+                report[PERFCOLS[6]].append(compute_auroc(scores))  # auroc
+                report[PERFCOLS[7]].append(compute_f1(scores, tool))  # f1
             pd.DataFrame(report).to_csv(perftable, sep="\t", index=False)
 
 
