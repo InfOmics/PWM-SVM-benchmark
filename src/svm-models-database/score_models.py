@@ -70,6 +70,8 @@ def score_models(testposdir: str, testnegdir: str, modelsdir: str, scoresdir: st
         testpos = os.path.join(testposdir, f"{experiment_name}_test.fa")
         testneg = os.path.join(testnegdir, f"{experiment_name}_neg_test.fa")
         scores_fname = os.path.join(scoresdir, experiment_name)
+        if os.stat(testpos).st_size <= 0:  # ignore experiments without test data
+            continue
         score(testpos, testneg, model, scores_fname)
     sys.stdout.write(
         f"Scoring test sequences with SVM-based motif models completed in {(time() - start):.2f}s\n\n"
