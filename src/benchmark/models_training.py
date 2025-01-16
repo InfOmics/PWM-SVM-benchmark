@@ -138,12 +138,8 @@ def train_models_width(benchdatadir: str, bg: str, modelsdir: str) -> None:
             positive = os.path.join(trainposdir, f"{experiment_name}_train.fa")
             negative = os.path.join(trainnegdir, f"{experiment_name}_{bg}_neg_train.fa")
             meme(positive, os.path.join(modelsoutdir, experiment_name))  # meme train
-            streme(
-                positive, negative, os.path.join(modelsoutdir, experiment_name)
-            )  # streme train
-            gkmtrain(
-                positive, negative, 4, os.path.join(modelsoutdir, experiment_name)
-            )  # lsgkm train
+            # streme(positive, negative, os.path.join(modelsoutdir, experiment_name))  # streme train
+            # gkmtrain(positive, negative, 4, os.path.join(modelsoutdir, experiment_name))  # lsgkm train
 
 
 def train_models(comparison: str, benchdatadir: str, benchmarkdir: str) -> None:

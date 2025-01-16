@@ -194,7 +194,7 @@ def compute_background_data(
     for chrom in trainpos_chrom:  # select train features
         bgtrain.extend(random.sample(trainneg_chrom[chrom], len(trainpos_chrom[chrom])))
     # select test features
-    test_th = len(testpos_chrom[testchrom]) * 10
+    test_th = len(testpos_chrom[testchrom]) * 1
     test_th = (
         test_th
         if len(testneg_chrom[testchrom]) > test_th
@@ -227,22 +227,22 @@ def split_dataset(
     trainposdir = (
         os.path.join(traindir, "shuffle/positive")
         if shuffle
-        else os.path.join(traindir, "dnase/positive")
+        else os.path.join(traindir, "dnase-1/positive")
     )
     trainnegdir = (
         os.path.join(traindir, "shuffle/negative")
         if shuffle
-        else os.path.join(traindir, "dnase/negative")
+        else os.path.join(traindir, "dnase-1/negative")
     )
     testposdir = (
         os.path.join(testdir, "shuffle/positive")
         if shuffle
-        else os.path.join(testdir, "dnase/positive")
+        else os.path.join(testdir, "dnase-1/positive")
     )
     testnegdir = (
         os.path.join(testdir, "shuffle/negative")
         if shuffle
-        else os.path.join(testdir, "dnase/negative")
+        else os.path.join(testdir, "dnase-1/negative")
     )
     # create train and test data folders
     for d in [trainposdir, trainnegdir, testposdir, testnegdir]:
@@ -295,9 +295,12 @@ def main():
     start = time()
     for posbed in tqdm(posbeds):
         # shuffle as background (synthetic data)
-        split_dataset(posbed, negbed, genome, traindir, testdir, True)
+        # split_dataset(posbed, negbed, genome, traindir, testdir, True)
         # dnase as background (real biological background)
         split_dataset(posbed, negbed, genome, traindir, testdir, False)
+    sys.stdout.write(
+        f"Train and test datasets construction completed in {(time() - start):.2f}s"
+    )
 
 
 if __name__ == "__main__":
