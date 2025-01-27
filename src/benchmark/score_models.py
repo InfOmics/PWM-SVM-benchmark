@@ -28,6 +28,14 @@ COMPARISONS = ["size", "width", "kernel"]  # benchmark comparisons performed
 SIZES = [500, 1000, 2000, 5000, 10000, 0]  # dataset sizes compared
 WIDTHS = [50, 100, 150, 200, 0]  # sequence widths compared
 FIMO = "fimo"  # fimo command line call
+TESTSLIST = [
+    ("shuffle", "dnase-1"),
+    ("dnase", "dnase-1"),
+    ("shuffle", "shuffle"),
+    ("dnase", "shuffle"),
+    ("shuffle", "dnase"),
+    ("dnase", "dnase"),
+]
 # parameters used to scan sequences with fimo
 FIMOOPTIONS = "--max-stored-scores 1000000000 --verbosity 1 --thresh 1"
 REPORTCOLS = ["seqname", "score", "pvalue", "peak"]  # colnames used in the report
@@ -41,6 +49,7 @@ PERFCOLS = [
     "AUROC",
     "F1",
 ]  # performance report column names
+TOOLS = ["meme", "streme", "svm"]
 
 
 def parse_commandline(args: List[str]) -> Tuple[str, str, str]:
@@ -62,7 +71,12 @@ def read_fasta(fasta: str) -> Dict[str, str]:
             sequences = [line.strip() for line in infile if not line.startswith(">")]
     except OSError as e:
         raise OSError(f"An error occurred while reading {fasta}") from e
-    return {seqname: sequences[i] for i, seqname in enumerate(seqnames)}
+    # accomodate long motifs learned by meme
+    return {
+        seqname: sequences[i]
+        for i, seqname in enumerate(seqnames)
+        if len(sequences[i]) > 50
+    }
 
 
 def score_pwm(fasta: str, seqname: str, sequence: str, pwm: str) -> Tuple[float, float]:
@@ -180,7 +194,6 @@ def gkmpredict(testpos: str, testneg: str, model: str, prefix: str) -> None:
             f"An error occurred while scoring negative sequences {testneg}"
         )
     store_scores_svm(scorespos, scoresneg, prefix)
-    subprocess.call(f"rm -r {prefix}", shell=True)
 
 
 def score_models_size(
@@ -206,14 +219,17 @@ def score_models_size(
             testneg = os.path.join(
                 testdatadir_neg, f"{experiment_name}_{bg}_neg_test.fa"
             )
-            fimo(
-                testpos,
-                testneg,
-                os.path.join(modelsdir_size, f"{experiment_name}_meme/meme.txt"),
-                os.path.join(scoresoutdir, f"{experiment_name}_meme"),
-            )  # meme
-            # fimo(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_streme/streme.txt"), os.path.join(scoresoutdir, f"{experiment_name}_streme"))  # streme
-            # gkmpredict(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_svm/{experiment_name}.model.txt"), os.path.join(scoresoutdir, f"{experiment_name}_svm"))  # svm
+            try:
+                fimo(
+                    testpos,
+                    testneg,
+                    os.path.join(modelsdir_size, f"{experiment_name}_meme/meme.txt"),
+                    os.path.join(scoresoutdir, f"{experiment_name}_meme"),
+                )  # meme
+                # fimo(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_streme/streme.txt"), os.path.join(scoresoutdir, f"{experiment_name}_streme"))  # streme
+                # gkmpredict(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_svm/{experiment_name}.model.txt"), os.path.join(scoresoutdir, f"{experiment_name}_svm"))  # svm
+            except Exception as e:
+                raise Exception(f"Scoring failed on {testpos}, {testneg}") from e
 
 
 def score_models_width(
@@ -239,23 +255,23 @@ def score_models_width(
             testneg = os.path.join(
                 testdatadir_neg, f"{experiment_name}_{bg}_neg_test.fa"
             )
-            fimo(
-                testpos,
-                testneg,
-                os.path.join(modelsdir_size, f"{experiment_name}_meme/meme.txt"),
-                os.path.join(scoresoutdir, f"{experiment_name}_meme"),
-            )  # meme
-            # fimo(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_streme/streme.txt"), os.path.join(scoresoutdir, f"{experiment_name}_streme"))  # streme
-            # gkmpredict(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_svm/{experiment_name}.model.txt"), os.path.join(scoresoutdir, f"{experiment_name}_svm"))  # svm
+            try:
+                fimo(
+                    testpos,
+                    testneg,
+                    os.path.join(modelsdir_size, f"{experiment_name}_meme/meme.txt"),
+                    os.path.join(scoresoutdir, f"{experiment_name}_meme"),
+                )  # meme
+                # fimo(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_streme/streme.txt"), os.path.join(scoresoutdir, f"{experiment_name}_streme"))  # streme
+                # gkmpredict(testpos, testneg, os.path.join(modelsdir_size, f"{experiment_name}_svm/{experiment_name}.model.txt"), os.path.join(scoresoutdir, f"{experiment_name}_svm"))  # svm
+            except Exception as e:
+                raise Exception(f"Scoring failed on {testpos}, {testneg}") from e
 
 
 def score_models(comparison: str, datadir: str, benchmarkdir: str):
     """ """
     if comparison == COMPARISONS[0]:  # compare performance on different dataset sizes
-        for bg_model, bg_score in [
-            ("shuffle", "dnase-1"),
-            ("dnase", "dnase-1"),
-        ]:  # list(product(["shuffle", "dnase"], repeat=2)):
+        for bg_model, bg_score in TESTSLIST:
             modelsdir = os.path.join(
                 benchmarkdir, f"models/dataset-size-comparison/{bg_model}"
             )
@@ -272,10 +288,7 @@ def score_models(comparison: str, datadir: str, benchmarkdir: str):
                 bg_score.replace("-1", ""),
             )
     if comparison == COMPARISONS[1]:  # compare performance on sequence width
-        for bg_model, bg_score in [
-            ("shuffle", "dnase-1"),
-            ("dnase", "dnase-1"),
-        ]:  # list(product(["shuffle", "dnase"], repeat=2)):
+        for bg_model, bg_score in TESTSLIST:
             modelsdir = os.path.join(
                 benchmarkdir, f"models/sequence-width-comparison/{bg_model}"
             )
@@ -374,19 +387,19 @@ def compute_f1(scores: pd.DataFrame, tool: str) -> float:
 
 def evaluate_models_size(scoresdir: str, perfdir: str) -> None:
     """ """
-    # retrieve experiment names
-    experiment_names = {
-        os.path.basename(d).split("_")[0]
-        for d in glob(os.path.join(scoresdir, "size_500/*_streme.tsv"))
-    }
-    assert len(experiment_names) == 59
     for size in SIZES:
         sizedir = sizedir = "size_full" if size == 0 else f"size_{size}"
         sys.stdout.write(f"size - {sizedir}\n")
         scoresdir_size = os.path.join(scoresdir, sizedir)
         # initialize models performance report
         report = {cname: [] for cname in PERFCOLS}
-        for tool in ["meme"]:
+        for tool in TOOLS:
+            # retrieve experiment names
+            experiment_names = {
+                os.path.basename(d).split("_")[0]
+                for d in glob(os.path.join(scoresdir, sizedir, f"*_{tool}.tsv"))
+            }
+            assert len(experiment_names) == 59
             perftable = os.path.join(perfdir, f"summary_table_{sizedir}_{tool}.tsv")
             for experiment_name in tqdm(
                 experiment_names
@@ -407,19 +420,18 @@ def evaluate_models_size(scoresdir: str, perfdir: str) -> None:
 
 def evaluate_models_width(scoresdir: str, perfdir: str) -> None:
     """ """
-    # retrieve experiment names
-    experiment_names = {
-        os.path.basename(d).split("_")[0]
-        for d in glob(os.path.join(scoresdir, "width_50/*_streme.tsv"))
-    }
-    assert len(experiment_names) == 59
     for width in WIDTHS:
         widthdir = "width_full" if width == 0 else f"width_{width}"
         sys.stdout.write(f"width - {widthdir}\n")
         scoresdir_size = os.path.join(scoresdir, widthdir)
         # initialize models performance report
         report = {cname: [] for cname in PERFCOLS}
-        for tool in ["meme"]:
+        for tool in TOOLS:
+            experiment_names = {
+                os.path.basename(d).split("_")[0]
+                for d in glob(os.path.join(scoresdir, widthdir, f"*_{tool}.tsv"))
+            }
+            assert len(experiment_names) == 59
             perftable = os.path.join(perfdir, f"summary_table_{widthdir}_{tool}.tsv")
             for experiment_name in tqdm(
                 experiment_names
@@ -441,10 +453,7 @@ def evaluate_models_width(scoresdir: str, perfdir: str) -> None:
 def evaluate_models_performance(comparison: str, benchmarkdir: str):
     """ """
     if comparison == COMPARISONS[0]:  # compare performance on different dataset sizes
-        for bg_model, bg_score in [
-            ("shuffle", "dnase-1"),
-            ("dnase", "dnase-1"),
-        ]:  # list(product(["shuffle", "dnase"], repeat=2)):
+        for bg_model, bg_score in TESTSLIST:
             scoresdir = os.path.join(
                 benchmarkdir, f"scores/dataset-size-comparison/{bg_model}-{bg_score}"
             )
@@ -457,10 +466,7 @@ def evaluate_models_performance(comparison: str, benchmarkdir: str):
                 os.makedirs(perfdir)
             evaluate_models_size(scoresdir, perfdir)
     if comparison == COMPARISONS[1]:  # compare performance on different sequence widths
-        for bg_model, bg_score in [
-            ("shuffle", "dnase-1"),
-            ("dnase", "dnase-1"),
-        ]:  # list(product(["shuffle", "dnase"], repeat=2)):
+        for bg_model, bg_score in TESTSLIST:
             scoresdir = os.path.join(
                 benchmarkdir, f"scores/sequence-width-comparison/{bg_model}-{bg_score}"
             )
