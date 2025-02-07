@@ -23,11 +23,14 @@ CHROMS = [f"chr{c}" for c in list(range(1, 23)) + ["X", "Y"]]
 TRAINDIR = "traindata"
 TESTDIR = "testdata"
 
+
 def parse_commandline(args: List[str]) -> Tuple[List[str], str, str, str]:
     """ """
     if len(args) != 4:
         raise ValueError(f"Too many/few input arguments ({len(args)})")
-    posdir, negdir, genome, datadir = args  # recover folders storing positive and negative data
+    posdir, negdir, genome, datadir = (
+        args  # recover folders storing positive and negative data
+    )
     if not os.path.isdir(posdir):
         raise FileNotFoundError(f"Unable to locate positive data folder {posdir}")
     if not os.path.isdir(negdir):
@@ -125,20 +128,32 @@ def split_train_test(
     return bed_train_fname, bed_test_fname
 
 
-def shuffle_sequences(trainpos: str, testpos: str, trainnegdir: str, testnegdir: str, prefix: str):
+def shuffle_sequences(
+    trainpos: str, testpos: str, trainnegdir: str, testnegdir: str, prefix: str
+):
     """ """
     # assigne traun and test dataset file names
     trainneg = os.path.join(trainnegdir, f"{prefix}_shuffle_neg_train.fa")
     testneg = os.path.join(testnegdir, f"{prefix}_shuffle_neg_test.fa")
     # shuffle train positive sequences to recover synthetic train background data
-    code = subprocess.call(f"fasta-shuffle-letters {trainpos} -kmer 2 -dna -line 100000 -seed 42 {trainneg}", shell=True)
+    code = subprocess.call(
+        f"fasta-shuffle-letters {trainpos} -kmer 2 -dna -line 100000 -seed 42 {trainneg}",
+        shell=True,
+    )
     if code != 0:
-        raise subprocess.SubprocessError(f"Shuffling train positive sequences failed on {os.path.basename(prefix)}")
+        raise subprocess.SubprocessError(
+            f"Shuffling train positive sequences failed on {os.path.basename(prefix)}"
+        )
     # shuffle test positive sequences to recover synthetic test background data
-    code = subprocess.call(f"fasta-shuffle-letters {testpos} -kmer 2 -dna -line 100000 -seed 42 {testneg}", shell=True)
+    code = subprocess.call(
+        f"fasta-shuffle-letters {testpos} -kmer 2 -dna -line 100000 -seed 42 {testneg}",
+        shell=True,
+    )
     if code != 0:
-        raise subprocess.SubprocessError(f"Shuffling test positive sequences failed on {os.path.basename(prefix)}")
-    
+        raise subprocess.SubprocessError(
+            f"Shuffling test positive sequences failed on {os.path.basename(prefix)}"
+        )
+
 
 def extract_sequences(bedfile: str, genome: str) -> str:
     """ """
@@ -198,14 +213,37 @@ def compute_background_data(
     return trainneg_fname, testneg_fname
 
 
-def split_dataset(positive: str, negative: str, genome: str, traindir: str, testdir: str, shuffle: bool):
+def split_dataset(
+    positive: str,
+    negative: str,
+    genome: str,
+    traindir: str,
+    testdir: str,
+    shuffle: bool,
+):
     """ """
     # retrieve experiment basename
     chip_fname = os.path.splitext(os.path.basename(positive))[0]
-    trainposdir = os.path.join(traindir, "shuffle/positive") if shuffle else os.path.join(traindir, "dnase-1/positive")
-    trainnegdir = os.path.join(traindir, "shuffle/negative") if shuffle else os.path.join(traindir, "dnase-1/negative")
-    testposdir = os.path.join(testdir, "shuffle/positive") if shuffle else os.path.join(testdir, "dnase-1/positive")
-    testnegdir = os.path.join(testdir, "shuffle/negative") if shuffle else os.path.join(testdir, "dnase-1/negative")
+    trainposdir = (
+        os.path.join(traindir, "shuffle/positive")
+        if shuffle
+        else os.path.join(traindir, "dnase-1/positive")
+    )
+    trainnegdir = (
+        os.path.join(traindir, "shuffle/negative")
+        if shuffle
+        else os.path.join(traindir, "dnase-1/negative")
+    )
+    testposdir = (
+        os.path.join(testdir, "shuffle/positive")
+        if shuffle
+        else os.path.join(testdir, "dnase-1/positive")
+    )
+    testnegdir = (
+        os.path.join(testdir, "shuffle/negative")
+        if shuffle
+        else os.path.join(testdir, "dnase-1/negative")
+    )
     # create train and test data folders
     for d in [trainposdir, trainnegdir, testposdir, testnegdir]:
         if not os.path.isdir(d):
@@ -216,14 +254,34 @@ def split_dataset(positive: str, negative: str, genome: str, traindir: str, test
         # remove features from negative overlapping with features on positive
         negative = filter_negative(positive, negative, chip_fname, trainnegdir)
     # split positive dataset in train and test
-    trainpos, testpos = split_train_test(positive, "chr2", chip_fname, trainposdir, testposdir)
-    trainpos_seqs, testpos_seqs = extract_sequences(trainpos, genome), extract_sequences(testpos, genome)
-    if shuffle:  # shuffle input positive sequences (synthetic background) peaks processing
-        shuffle_sequences(trainpos_seqs, testpos_seqs, trainnegdir, testnegdir, chip_fname)
+    trainpos, testpos = split_train_test(
+        positive, "chr2", chip_fname, trainposdir, testposdir
+    )
+    trainpos_seqs, testpos_seqs = extract_sequences(
+        trainpos, genome
+    ), extract_sequences(testpos, genome)
+    if (
+        shuffle
+    ):  # shuffle input positive sequences (synthetic background) peaks processing
+        shuffle_sequences(
+            trainpos_seqs, testpos_seqs, trainnegdir, testnegdir, chip_fname
+        )
     else:  # dnase peaks processing (real biological background)
-        trainneg, testneg = split_train_test(negative, "chr2", chip_fname, trainnegdir, testnegdir)
-        trainneg, testneg = compute_background_data(trainpos, trainneg, testpos, testneg, "chr2", chip_fname, trainnegdir, testnegdir)
+        trainneg, testneg = split_train_test(
+            negative, "chr2", chip_fname, trainnegdir, testnegdir
+        )
+        trainneg, testneg = compute_background_data(
+            trainpos,
+            trainneg,
+            testpos,
+            testneg,
+            "chr2",
+            chip_fname,
+            trainnegdir,
+            testnegdir,
+        )
         extract_sequences(trainneg, genome), extract_sequences(testneg, genome)
+
 
 def main():
     # parse command line arguments -> expected input: folder containing positive
@@ -240,8 +298,10 @@ def main():
         # split_dataset(posbed, negbed, genome, traindir, testdir, True)
         # dnase as background (real biological background)
         split_dataset(posbed, negbed, genome, traindir, testdir, False)
-    sys.stdout.write(f"Train and test datasets construction completed in {(time() - start):.2f}s")
+    sys.stdout.write(
+        f"Train and test datasets construction completed in {(time() - start):.2f}s"
+    )
+
 
 if __name__ == "__main__":
     main()
-
