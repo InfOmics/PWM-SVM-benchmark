@@ -1,6 +1,6 @@
-# PWM-SVM-benchmark
+# PWM- and SVM-based models benchmark
 
-# Database Creation
+# SVM Models' Collection
 
 ## Overview
 `BENCHMARK.zip` contains everything needed to execute the Snakemake workflow.
