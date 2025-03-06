@@ -52,15 +52,16 @@ def parse_commandline(args: List[str]) -> Tuple[List[str], str, str, str]:
     if not os.path.isfile(genome):
         raise FileNotFoundError(f"Unable to locate reference genome {genome}")
     # check data directory existance
-    if not os.path.isdir(datadir):
-        raise FileNotFoundError(f"Unable to locate data folder {datadir}")
+    # if not os.path.isdir(datadir):
+    #     raise FileNotFoundError(f"Unable to locate data folder {datadir}")
     return posbeds, negbeds[0], genome, datadir
 
 
 def construct_dirtree(datadir: str) -> Tuple[str, str]:
     """ """
     # create the directory tree within data folder
-    assert os.path.isdir(datadir)
+    # assert os.path.isdir(datadir)
+    os.makedirs(datadir, exist_ok=True)
     traindir, testdir = os.path.join(datadir, TRAINDIR), os.path.join(datadir, TESTDIR)
     for d in [traindir, testdir]:  # train and test directories
         if not os.path.isdir(d):  # if not already present, create directory
@@ -185,6 +186,7 @@ def compute_background_data(
     fname: str,
     trainnegdir: str,
     testnegdir: str,
+    fold: int
 ) -> Tuple[str, str]:
     """ """
     # divide genomic features by chromosome
@@ -194,7 +196,7 @@ def compute_background_data(
     for chrom in trainpos_chrom:  # select train features
         bgtrain.extend(random.sample(trainneg_chrom[chrom], len(trainpos_chrom[chrom])))
     # select test features
-    test_th = len(testpos_chrom[testchrom]) * 1
+    test_th = len(testpos_chrom[testchrom]) * fold
     test_th = (
         test_th
         if len(testneg_chrom[testchrom]) > test_th
@@ -220,29 +222,31 @@ def split_dataset(
     traindir: str,
     testdir: str,
     shuffle: bool,
+    fold: Optional[int]
 ):
     """ """
+    fold_name = "-1" if fold==1 else ""
     # retrieve experiment basename
     chip_fname = os.path.splitext(os.path.basename(positive))[0]
     trainposdir = (
         os.path.join(traindir, "shuffle/positive")
         if shuffle
-        else os.path.join(traindir, "dnase-1/positive")
+        else os.path.join(traindir, f"dnase{fold_name}/positive") # dnase-1
     )
     trainnegdir = (
         os.path.join(traindir, "shuffle/negative")
         if shuffle
-        else os.path.join(traindir, "dnase-1/negative")
+        else os.path.join(traindir, f"dnase{fold_name}/negative") # dnase-1
     )
     testposdir = (
         os.path.join(testdir, "shuffle/positive")
         if shuffle
-        else os.path.join(testdir, "dnase-1/positive")
+        else os.path.join(testdir, f"dnase{fold_name}/positive") # dnase-1
     )
     testnegdir = (
         os.path.join(testdir, "shuffle/negative")
         if shuffle
-        else os.path.join(testdir, "dnase-1/negative")
+        else os.path.join(testdir, f"dnase{fold_name}/negative") # dnase-1
     )
     # create train and test data folders
     for d in [trainposdir, trainnegdir, testposdir, testnegdir]:
@@ -279,6 +283,7 @@ def split_dataset(
             chip_fname,
             trainnegdir,
             testnegdir,
+            fold
         )
         extract_sequences(trainneg, genome), extract_sequences(testneg, genome)
 
@@ -295,9 +300,12 @@ def main():
     start = time()
     for posbed in tqdm(posbeds):
         # shuffle as background (synthetic data)
-        # split_dataset(posbed, negbed, genome, traindir, testdir, True)
+        split_dataset(posbed, negbed, genome, traindir, testdir, True, None)
         # dnase as background (real biological background)
-        split_dataset(posbed, negbed, genome, traindir, testdir, False)
+        split_dataset(posbed, negbed, genome, traindir, testdir, False, 1)
+        # dnase as background (10 fold)
+        split_dataset(posbed, negbed, genome, traindir, testdir, False, 10)
+
     sys.stdout.write(
         f"Train and test datasets construction completed in {(time() - start):.2f}s"
     )
