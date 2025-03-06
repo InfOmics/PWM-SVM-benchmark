@@ -217,7 +217,7 @@ def train_models_kernels(benchdatadir: str, bg: str, modelsdir: str) -> None:
     experiment_names = retrieve_experiment_names(
         os.path.join(benchdatadir, f"{bg}/train/fasta/positive/")
     )
-    for kernel in {"wgkmrbf": 5}:  # KERNELS:  # iterate over kernels
+    for kernel in KERNELS:  # KERNELS:  # iterate over kernels
         kerneldir = f"kernel_{kernel}"
         sys.stdout.write(f"kernel - {kernel}")
         trainposdir = os.path.join(benchdatadir, f"{bg}/train/fasta/positive/")
