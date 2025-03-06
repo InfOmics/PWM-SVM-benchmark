@@ -153,7 +153,7 @@ def compute_datasets_size(benchdir: str, traindatadir: str, genome: str, shuffle
     traindatadir = (
         os.path.join(traindatadir, "shuffle")
         if shuffle
-        else os.path.join(traindatadir, "dnase")
+        else os.path.join(traindatadir, "dnase-1")
     )
     # retrieve positive bed files
     posbeds = glob(os.path.join(traindatadir, "positive/*.bed"))
@@ -256,7 +256,7 @@ def compute_datasets_width(
     traindatadir = (
         os.path.join(traindatadir, "shuffle")
         if shuffle
-        else os.path.join(traindatadir, "dnase")
+        else os.path.join(traindatadir, "dnase-1") # changed from dnase to dnase-1
     )
     # retrieve positive bed files
     posbeds = glob(os.path.join(traindatadir, "positive/*.bed"))
@@ -358,11 +358,11 @@ def compute_datasets_optimal_global(
     traindatadir = (
         os.path.join(traindatadir, "shuffle")
         if shuffle
-        else os.path.join(traindatadir, "dnase")
+        else os.path.join(traindatadir, "dnase-1") # changed from dnase to dnase-1
     )
     # retrieve positive bed files
     posbeds = glob(os.path.join(traindatadir, "positive/*.bed"))
-    for tool in TOOLS[:2]:
+    for tool in TOOLS:
         # recover the best performing (globally) sequence width and dataset size
         size, width = retrieve_best_performance_global(benchdir, tool)
         for d in [
@@ -447,6 +447,7 @@ def retrieve_best_performance_local(
         )
         perftable.set_index("EXPERIMENT", inplace=True)
         widths_perf[width] = perftable.loc[experiment_name, "AUPRC"]
+        
     return max(sizes_perf, key=sizes_perf.get), max(widths_perf, key=widths_perf.get)
 
 
@@ -478,11 +479,11 @@ def compute_datasets_optimal_local(
     traindatadir = (
         os.path.join(traindatadir, "shuffle")
         if shuffle
-        else os.path.join(traindatadir, "dnase")
+        else os.path.join(traindatadir, "dnase-1") # changed from dnase to dnase-1
     )
     # retrieve positive bed files
     posbeds = glob(os.path.join(traindatadir, "positive/*.bed"))
-    for tool in TOOLS[:2]:
+    for tool in TOOLS:
         for d in [
             trainposdir_fasta,
             trainposdir_bed,
@@ -557,19 +558,19 @@ def main():
         comparison == COMPARISONS[2]
     ):  # benchmark performance on optimal global features
         compute_datasets_optimal_global(
-            benchdir, "comparison-data", traindatadir, genome, True
+            benchdir, os.path.join(benchdir, "comparison-data"), traindatadir, genome, True
         )  # synthetic bg
         compute_datasets_optimal_global(
-            benchdir, "comparison-data", traindatadir, genome, False
+            benchdir, os.path.join(benchdir, "comparison-data"), traindatadir, genome, False
         )  # real bg
     elif (
         comparison == COMPARISONS[3]
     ):  # benchmark performance on optimal local features
         compute_datasets_optimal_local(
-            benchdir, "comparison-data", traindatadir, genome, True
+            benchdir, os.path.join(benchdir, "comparison-data"), traindatadir, genome, True
         )  # synthetic bg
         compute_datasets_optimal_local(
-            benchdir, "comparison-data", traindatadir, genome, False
+            benchdir, os.path.join(benchdir, "comparison-data"), traindatadir, genome, False
         )  # real bg
 
 
