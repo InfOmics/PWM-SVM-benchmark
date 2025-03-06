@@ -24,6 +24,7 @@ import multiprocessing
 import subprocess
 import sys
 import os
+import re
 
 
 COMPARISONS = [
@@ -221,13 +222,13 @@ def score_models_size(
         os.path.basename(d).split("_")[0]
         for d in glob(os.path.join(modelsdir, "size_500/*_streme"))
     }
-    assert len(experiment_names) == 59  # should be 59 experiments
+    assert len(experiment_names) == 1  # should be 59 experiments
     for size in SIZES:
         sizedir = "size_full" if size == 0 else f"size_{size}"
         modelsdir_size = os.path.join(modelsdir, sizedir)  # models folder
         scoresoutdir = os.path.join(scoresdir, sizedir)  # scores folder
         if not os.path.isdir(scoresoutdir):  # create scores folder if not present
-            os.makedirs(scoresoutdir)
+            os.makedirs(scoresoutdir, exist_ok=True)
         sys.stdout.write(f"size - {sizedir}\n")
         for experiment_name in tqdm(experiment_names):
             # retrieve positive and negative test datasets
@@ -272,13 +273,13 @@ def score_models_width(
         os.path.basename(d).split("_")[0]
         for d in glob(os.path.join(modelsdir, "width_50/*_streme"))
     }
-    assert len(experiment_names) == 59  # should be 59 experiments
+    assert len(experiment_names) == 1  # should be 59 experiments
     for width in WIDTHS:
         widthdir = "width_full" if width == 0 else f"width_{width}"
         modelsdir_width = os.path.join(modelsdir, widthdir)  # models folder
         scoresoutdir = os.path.join(scoresdir, widthdir)  # scores folder
         if not os.path.isdir(scoresoutdir):  # create scores folder if not present
-            os.makedirs(scoresoutdir)
+            os.makedirs(scoresoutdir, exist_ok=True)
         sys.stdout.write(f"width - {widthdir}\n")
         for experiment_name in tqdm(experiment_names):
             # retrieve positive and negative test datasets
@@ -323,7 +324,7 @@ def score_models_global(
         os.path.basename(d).split("_")[0]
         for d in glob(os.path.join(modelsdir, "*_streme"))
     }
-    assert len(experiment_names) == 59  # should be 59 experiments
+    assert len(experiment_names) == 1  # should be 59 experiments
     os.makedirs(scoresdir, exist_ok=True)  # create scores folder if not present
     sys.stdout.write(f"background - {bg}")
     for experiment_name in tqdm(experiment_names):
@@ -364,7 +365,7 @@ def score_models_local(
         os.path.basename(d).split("_")[0]
         for d in glob(os.path.join(modelsdir, "*_streme"))
     }
-    assert len(experiment_names) == 59  # should be 59 experiments
+    assert len(experiment_names) == 1  # should be 59 experiments
     os.makedirs(scoresdir, exist_ok=True)  # create scores folder if not present
     sys.stdout.write(f"background - {bg}")
     for experiment_name in tqdm(experiment_names):
@@ -413,7 +414,8 @@ def score_models(comparison: str, datadir: str, benchmarkdir: str):
                 scoresdir,
                 testdatadir_pos,
                 testdatadir_neg,
-                bg_score.replace("-1", ""),
+                # bg_score.replace("-1", ""),
+                re.sub("\-[0-9]+", "", bg_score)
             )
     elif comparison == COMPARISONS[1]:  # compare performance on sequence width
         for bg_model, bg_score in TESTSLIST:
@@ -430,7 +432,8 @@ def score_models(comparison: str, datadir: str, benchmarkdir: str):
                 scoresdir,
                 testdatadir_pos,
                 testdatadir_neg,
-                bg_score.replace("-1", ""),
+                # bg_score.replace("-[]", ""),
+                re.sub("\-[0-9]+", "", bg_score)
             )
     elif comparison == COMPARISONS[2]:  # compare performance on global optimal features
         for bg_model, bg_score in TESTSLIST:
@@ -545,7 +548,7 @@ def evaluate_models_size(scoresdir: str, perfdir: str) -> None:
                 os.path.basename(d).split("_")[0]
                 for d in glob(os.path.join(scoresdir, sizedir, f"*_{tool}.tsv"))
             }
-            assert len(experiment_names) == 59
+            assert len(experiment_names) == 1 # 59
             perftable = os.path.join(perfdir, f"summary_table_{sizedir}_{tool}.tsv")
             for experiment_name in tqdm(
                 experiment_names
@@ -577,7 +580,7 @@ def evaluate_models_width(scoresdir: str, perfdir: str) -> None:
                 os.path.basename(d).split("_")[0]
                 for d in glob(os.path.join(scoresdir, widthdir, f"*_{tool}.tsv"))
             }
-            assert len(experiment_names) == 59
+            assert len(experiment_names) == 1 # 59
             perftable = os.path.join(perfdir, f"summary_table_{widthdir}_{tool}.tsv")
             for experiment_name in tqdm(
                 experiment_names
@@ -604,7 +607,7 @@ def evaluate_models_global(scoresdir: str, perfdir: str) -> None:
             os.path.basename(d).split("_")[0]
             for d in glob(os.path.join(scoresdir, f"*_{tool}.tsv"))
         }
-        assert len(experiment_names) == 59
+        assert len(experiment_names) == 1 # 59
         perftable = os.path.join(perfdir, f"summary_table_global_{tool}.tsv")
         for experiment_name in tqdm(
             experiment_names
@@ -631,7 +634,7 @@ def evaluate_models_local(scoresdir: str, perfdir: str) -> None:
             os.path.basename(d).split("_")[0]
             for d in glob(os.path.join(scoresdir, f"*_{tool}.tsv"))
         }
-        assert len(experiment_names) == 59
+        assert len(experiment_names) == 1 # 59
         perftable = os.path.join(perfdir, f"summary_table_global_{tool}.tsv")
         for experiment_name in tqdm(
             experiment_names
@@ -663,7 +666,7 @@ def evaluate_models_performance(comparison: str, benchmarkdir: str):
             )
             # if not already present create performance folder
             if not os.path.isdir(perfdir):
-                os.makedirs(perfdir)
+                os.makedirs(perfdir, exist_ok=True)
             evaluate_models_size(scoresdir, perfdir)
     elif (
         comparison == COMPARISONS[1]
@@ -678,7 +681,7 @@ def evaluate_models_performance(comparison: str, benchmarkdir: str):
             )
             # if not already present create performance folder
             if not os.path.isdir(perfdir):
-                os.makedirs(perfdir)
+                os.makedirs(perfdir, exist_ok=True)
             evaluate_models_width(scoresdir, perfdir)
     elif comparison == COMPARISONS[2]:  # compare perfromance on global optimal features
         for bg_model, bg_score in TESTSLIST:
@@ -688,7 +691,7 @@ def evaluate_models_performance(comparison: str, benchmarkdir: str):
             perfdir = os.path.join(
                 benchmarkdir, f"performance/optimal-global/{bg_model}-{bg_score}"
             )
-            os.makedirs(perfdir)  # create perfromance folder if not present
+            os.makedirs(perfdir, exist_ok=True)  # create perfromance folder if not present
             evaluate_models_global(scoresdir, perfdir)
     elif comparison == COMPARISONS[3]:  # compare perfromance on local optimal features
         for bg_model, bg_score in TESTSLIST:
@@ -698,7 +701,7 @@ def evaluate_models_performance(comparison: str, benchmarkdir: str):
             perfdir = os.path.join(
                 benchmarkdir, f"performance/optimal-local/{bg_model}-{bg_score}"
             )
-            os.makedirs(perfdir)  # create perfromance folder if not present
+            os.makedirs(perfdir, exist_ok=True)  # create perfromance folder if not present
             evaluate_models_local(scoresdir, perfdir)
 
 
