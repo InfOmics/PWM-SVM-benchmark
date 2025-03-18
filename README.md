@@ -10,15 +10,23 @@ The `benchmark/src` folder contains scripts for replicating the analysis:
 Use `pipeline.py` to run the entire analysis, selecting comparisons (`width`, `size`, `optimal-local`, `optimal-global`) to replicate.
 
 ## Setup Instructions
-1. Create a Conda environment with Python, then install dependencies with:  
+1. Create a Conda environment with Python
+   ```bash
+   conda create -n <env_name> python
+   ```
+   and activate it with:
+   ```bash
+   conda activate <env_name>
+   ```
+2. Install dependencies with:  
    ```bash
    pip install -r requirements.txt
    ```
    
-2. Install [MEME-SUITE](https://meme-suite.org/meme/doc/install.html?man_type=web) and [lsgkm](https://github.com/Dongwon-Lee/lsgkm)
+3. Install [MEME-SUITE](https://meme-suite.org/meme/doc/install.html?man_type=web) and [lsgkm](https://github.com/Dongwon-Lee/lsgkm)
    - Make sure `~/meme/bin` and `~/lsgkm/bin` are correctly added to your `$PATH`.
 
-3. Modify `SRC_DIR`, `REFERENCE_GENOME`, `POSITIVE_BEDS`, `NEGATIVE_BEDS` inside `pipeline.py` to reflect your files organization.
+4. Modify `SRC_DIR`, `REFERENCE_GENOME`, `POSITIVE_BEDS`, `NEGATIVE_BEDS` inside `pipeline.py` to reflect your files organization.
 
 ## Usage
 Run the pipeline with:
