@@ -1,7 +1,7 @@
 # PWM- and SVM-based models benchmark
 
 ## Overview
-The `benchmark/src` folder contains scripts for replicating the analysis:  
+The `src/benchmark` folder contains scripts for replicating the analysis:  
 - `dataset_split.py` – Generates train and test datasets for each input BED file.  
 - `compute_benchmark_datasets.py` – Refines datasets for selected comparisons.  
 - `models_training.py` – Trains PWM- and SVM-based models on refined datasets.  
@@ -41,7 +41,7 @@ All the results will be included in a `benchmark` folder.
 # SVM Models' Collection
 
 ## Overview
-`BENCHMARK.zip` contains everything needed to execute the Snakemake workflow.
+`src/svm-models-database` contains everything needed to execute the Snakemake workflow.
 
 ## Setup Instructions
 Before running the Snakemake pipeline, please ensure the following:
