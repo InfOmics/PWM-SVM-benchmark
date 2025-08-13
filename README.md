@@ -250,7 +250,7 @@ snakemake -p --cores 8 models_report.csv
 
 ## Citation
 
-Tognon M, Kumbara A, Betti A, Ruggeri L, Giugno R. Benchmarking PWM and SVM-based Models for Transcription Factor Binding Site Prediction: A Comparative Analysis on Synthetic and Biological Data. BiorXiv 2025; [https://doi.org/10.1101/2025.03.20.644354](https://doi.org/10.1101/2025.03.20.644354)
+Tognon M, Kumbara A, Betti A, Ruggeri L, Giugno R. Benchmarking transcription factor binding site prediction models: a comparative analysis on synthetic and biological data. Brief Bioinform. 2025 Jul 2;26(4):bbaf363. doi: [10.1093/bib/bbaf363](https://doi.org/10.1093/bib/bbaf363). PMID: 40702706; PMCID: PMC12286778.
 
 ## License
 
